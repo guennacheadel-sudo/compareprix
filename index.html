@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ComparePrix — Trouvez le meilleur prix en un clic</title>
+    <meta name="description" content="ComparePrix compare les prix de vos produits préférés sur Amazon, Fnac, CDiscount, Darty et bien d'autres. Économisez à chaque achat.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;700;800&family=Satoshi:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --surface: #12121a;
+            --border: rgba(255, 255, 255, 0.06);
+            --text: #e8e8ed;
+            --text-muted: #7a7a8e;
+            --accent: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.25);
+            --green: #22c55e;
+            --orange: #f59e0b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Satoshi', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Grain overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        /* Ambient glow */
+        .glow-orb {
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.12;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .glow-orb--blue { background: #3b82f6; top: -200px; right: -100px; }
+        .glow-orb--purple { background: #8b5cf6; bottom: -200px; left: -100px; }
+
+        /* Nav */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 50;
+            backdrop-filter: blur(20px);
+            background: rgba(10, 10, 15, 0.7);
+            border-bottom: 1px solid var(--border);
+        }
+        .logo {
+            font-family: 'Cabinet Grotesk', sans-serif;
+            font-weight: 800;
+            font-size: 1.4rem;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+        .nav-links { display: flex; gap: 32px; align-items: center; }
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        .nav-links a:hover { color: var(--text); }
+
+        /* Hero */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 120px 24px 80px;
+            position: relative;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 16px;
+            border-radius: 100px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 32px;
+            animation: fadeUp 0.8s ease both;
+        }
+        .badge-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--green);
+            animation: pulse 2s infinite;
+        }
+        h1 {
+            font-family: 'Cabinet Grotesk', sans-serif;
+            font-size: clamp(2.8rem, 7vw, 5.5rem);
+            font-weight: 800;
+            line-height: 1.05;
+            letter-spacing: -2px;
+            max-width: 800px;
+            animation: fadeUp 0.8s 0.1s ease both;
+        }
+        h1 .highlight {
+            background: linear-gradient(135deg, var(--accent), #8b5cf6, var(--accent));
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 4s ease infinite;
+        }
+        .hero-sub {
+            font-size: 1.15rem;
+            color: var(--text-muted);
+            max-width: 520px;
+            line-height: 1.7;
+            margin-top: 24px;
+            animation: fadeUp 0.8s 0.2s ease both;
+        }
+
+        /* Search demo */
+        .search-demo {
+            margin-top: 48px;
+            width: 100%;
+            max-width: 560px;
+            animation: fadeUp 0.8s 0.3s ease both;
+        }
+        .search-bar {
+            display: flex;
+            align-items: center;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 6px 6px 6px 20px;
+            gap: 12px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .search-bar:focus-within {
+            border-color: rgba(59, 130, 246, 0.4);
+            box-shadow: 0 0 0 4px var(--accent-glow);
+        }
+        .search-bar svg { color: var(--text-muted); flex-shrink: 0; }
+        .search-bar input {
+            flex: 1;
+            background: none;
+            border: none;
+            outline: none;
+            color: var(--text);
+            font-size: 1rem;
+            font-family: inherit;
+        }
+        .search-bar input::placeholder { color: var(--text-muted); }
+        .search-btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, var(--accent), #6366f1);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            white-space: nowrap;
+        }
+        .search-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 24px var(--accent-glow);
+        }
+
+        /* Partners */
+        .partners {
+            margin-top: 56px;
+            animation: fadeUp 0.8s 0.4s ease both;
+        }
+        .partners p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+        }
+        .partner-logos {
+            display: flex;
+            gap: 40px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            opacity: 0.4;
+        }
+        .partner-logos span {
+            font-family: 'Cabinet Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 1.2rem;
+            letter-spacing: -0.5px;
+        }
+
+        /* Features */
+        .features {
+            padding: 120px 24px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        .features-header {
+            text-align: center;
+            margin-bottom: 64px;
+        }
+        .features-header h2 {
+            font-family: 'Cabinet Grotesk', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+        .features-header p {
+            color: var(--text-muted);
+            margin-top: 12px;
+            font-size: 1.05rem;
+        }
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .feature-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 36px;
+            transition: border-color 0.3s, transform 0.3s;
+        }
+        .feature-card:hover {
+            border-color: rgba(59, 130, 246, 0.2);
+            transform: translateY(-4px);
+        }
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            margin-bottom: 20px;
+        }
+        .feature-icon--blue { background: rgba(59, 130, 246, 0.12); }
+        .feature-icon--green { background: rgba(34, 197, 94, 0.12); }
+        .feature-icon--orange { background: rgba(245, 158, 11, 0.12); }
+        .feature-card h3 {
+            font-family: 'Cabinet Grotesk', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        .feature-card p {
+            color: var(--text-muted);
+            line-height: 1.7;
+            font-size: 0.95rem;
+        }
+
+        /* How it works */
+        .how-it-works {
+            padding: 100px 24px;
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .how-it-works h2 {
+            font-family: 'Cabinet Grotesk', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 60px;
+        }
+        .steps {
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            text-align: left;
+        }
+        .step {
+            display: flex;
+            gap: 24px;
+            align-items: flex-start;
+        }
+        .step-number {
+            width: 48px;
+            height: 48px;
+            min-width: 48px;
+            border-radius: 50%;
+            border: 2px solid var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Cabinet Grotesk', sans-serif;
+            font-weight: 800;
+            font-size: 1.1rem;
+            color: var(--accent);
+        }
+        .step h3 {
+            font-family: 'Cabinet Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 1.15rem;
+            margin-bottom: 6px;
+        }
+        .step p {
+            color: var(--text-muted);
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        /* CTA */
+        .cta-section {
+            padding: 100px 24px;
+            text-align: center;
+        }
+        .cta-box {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 64px 48px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+        .cta-box::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: 20%;
+            right: 20%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+        }
+        .cta-box h2 {
+            font-family: 'Cabinet Grotesk', sans-serif;
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin-bottom: 12px;
+        }
+        .cta-box p {
+            color: var(--text-muted);
+            margin-bottom: 32px;
+            font-size: 1rem;
+        }
+        .cta-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 16px 36px;
+            background: linear-gradient(135deg, var(--accent), #6366f1);
+            border: none;
+            border-radius: 14px;
+            color: white;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .cta-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px var(--accent-glow);
+        }
+
+        /* Footer */
+        footer {
+            padding: 40px 24px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border);
+        }
+
+        /* Animations */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        /* Mobile */
+        @media (max-width: 640px) {
+            nav { padding: 16px 20px; }
+            .nav-links { display: none; }
+            h1 { letter-spacing: -1px; }
+            .partner-logos { gap: 24px; }
+            .partner-logos span { font-size: 1rem; }
+            .features-grid { grid-template-columns: 1fr; }
+            .cta-box { padding: 48px 28px; }
+            .step { flex-direction: column; align-items: center; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="glow-orb glow-orb--blue"></div>
+    <div class="glow-orb glow-orb--purple"></div>
+
+    <nav>
+        <div class="logo">
+            <div class="logo-icon">⚡</div>
+            ComparePrix
+        </div>
+        <div class="nav-links">
+            <a href="#fonctionnalites">Fonctionnalités</a>
+            <a href="#comment-ca-marche">Comment ça marche</a>
+            <a href="#telecharger">Télécharger</a>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="badge">
+            <span class="badge-dot"></span>
+            Bientôt disponible sur iOS et Android
+        </div>
+        <h1>Trouvez le <span class="highlight">meilleur prix</span> en un clic</h1>
+        <p class="hero-sub">ComparePrix analyse des dizaines de sites marchands en temps réel pour vous garantir le prix le plus bas sur tous vos produits préférés.</p>
+
+        <div class="search-demo">
+            <div class="search-bar">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input type="text" placeholder="Rechercher un produit..." disabled>
+                <button class="search-btn">Comparer</button>
+            </div>
+        </div>
+
+        <div class="partners">
+            <p>Nos marchands partenaires</p>
+            <div class="partner-logos">
+                <span>Amazon</span>
+                <span>Fnac</span>
+                <span>CDiscount</span>
+                <span>Darty</span>
+                <span>Boulanger</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="features" id="fonctionnalites">
+        <div class="features-header">
+            <h2>Pourquoi ComparePrix ?</h2>
+            <p>Les outils dont vous avez besoin pour ne plus jamais surpayer.</p>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon feature-icon--blue">🔍</div>
+                <h3>Recherche intelligente</h3>
+                <p>Tapez le nom du produit, scannez un code-barres ou prenez une photo. Notre IA trouve les meilleures offres sur des dizaines de sites.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon feature-icon--green">💰</div>
+                <h3>Prix en temps réel</h3>
+                <p>Les prix sont actualisés en permanence. Vous voyez toujours le prix le plus récent, trié du moins cher au plus cher.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon feature-icon--orange">🔔</div>
+                <h3>Alertes de prix</h3>
+                <p>Définissez un prix cible et recevez une notification dès qu'un marchand atteint votre budget. Ne ratez plus aucune bonne affaire.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="how-it-works" id="comment-ca-marche">
+        <h2>Comment ça marche ?</h2>
+        <div class="steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <div>
+                    <h3>Recherchez votre produit</h3>
+                    <p>Entrez le nom, scannez le code-barres ou prenez une photo du produit que vous souhaitez acheter.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <div>
+                    <h3>Comparez les offres</h3>
+                    <p>ComparePrix affiche instantanément les prix de tous les marchands, triés du moins cher au plus cher.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <div>
+                    <h3>Achetez au meilleur prix</h3>
+                    <p>Cliquez sur l'offre qui vous convient et vous êtes redirigé directement vers le site du marchand pour finaliser votre achat.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta-section" id="telecharger">
+        <div class="cta-box">
+            <h2>Prêt à économiser ?</h2>
+            <p>L'application sera bientôt disponible sur iOS et Android. Inscrivez-vous pour être notifié du lancement.</p>
+            <a href="#" class="cta-btn">
+                Être notifié du lancement
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+        </div>
+    </section>
+
+    <footer>
+        <p>© 2025 ComparePrix. Tous droits réservés. Comparateur de prix indépendant.</p>
+    </footer>
+</body>
+</html>
